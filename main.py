@@ -1,8 +1,6 @@
 import random
-
 import discord
-from discord.ext import commands
-
+from discord.ext import commands, tasks
 import const
 
 intents = discord.Intents.default()
@@ -11,9 +9,17 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
+@tasks.loop(seconds=60)
+async def change_status():
+    with open("./text_files/bot_activity_status_list.txt", "r") as f:
+        random_bot_status = random.choice(f.readlines())
+    await bot.change_presence(activity=discord.CustomActivity(random_bot_status))
+
+
 @bot.event
 async def on_ready():
     print("Bot connected to Discord")
+    change_status.start()
 
 
 @bot.command()
@@ -27,9 +33,8 @@ async def magic_eightball(ctx, question=""):
     if question == "":
         await ctx.reply("You have to ask a question", mention_author=False)
     else:
-        with open("magic_eightball_responses.txt", "r") as f:
-            responses = f.readlines()
-            random_response = random.choice(responses)
+        with open("./text_files/magic_eightball_responses.txt", "r") as f:
+            random_response = random.choice(f.readlines())
         await ctx.reply(random_response, mention_author=False)
 
 
