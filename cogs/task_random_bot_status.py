@@ -7,11 +7,11 @@ from discord.ext import commands, tasks
 class RandomBotStatus(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.change_status.start()
 
     @commands.Cog.listener()
     async def on_ready(self):
         print(f"{os.path.basename(__file__)} is ready!")
+        self.change_status.start()
 
     @tasks.loop(seconds=60)
     async def change_status(self):
