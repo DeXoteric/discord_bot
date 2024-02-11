@@ -59,6 +59,8 @@ async def set_prefix(ctx, new_prefix: str):
 
 @bot.event
 async def on_ready():
+    sync = await bot.tree.sync()
+    print(f"synced {len(sync)} commands")
     print("Bot connected to Discord")
 
 
