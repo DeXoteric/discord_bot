@@ -9,7 +9,7 @@ intents = discord.Intents.all()
 
 
 def get_server_prefix(bot, message):
-    with open("prefixes.json", "r") as f:
+    with open("./json_files/prefixes.json", "r") as f:
         prefixes = json.load(f)
 
     return prefixes[str(message.guild.id)]
@@ -21,37 +21,37 @@ bot = commands.Bot(command_prefix=get_server_prefix, intents=intents)
 @bot.event
 async def on_guild_join(guild):
     try:
-        with open("prefixes.json", "r") as f:
+        with open("./json_files/prefixes.json", "r") as f:
             prefixes = json.load(f)
     except FileNotFoundError:
         prefixes = {}
 
     prefixes[str(guild.id)] = "!"
 
-    with open("prefixes.json", "w") as f:
+    with open("./json_files/prefixes.json", "w") as f:
         json.dump(prefixes, f, indent=4)
 
 
 @bot.event
 async def on_guild_remove(guild):
-    with open("prefixes.json", "r") as f:
+    with open("./json_files/prefixes.json", "r") as f:
         prefixes = json.load(f)
 
     prefixes.pop(str(guild.id))
 
-    with open("prefixes.json", "w") as f:
+    with open("./json_files/prefixes.json", "w") as f:
         json.dump(prefixes, f, indent=4)
 
 
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def set_prefix(ctx, new_prefix: str):
-    with open("prefixes.json", "r") as f:
+    with open("./json_files/prefixes.json", "r") as f:
         prefixes = json.load(f)
 
     prefixes[str(ctx.guild.id)] = new_prefix
 
-    with open("prefixes.json", "w") as f:
+    with open("./json_files/prefixes.json", "w") as f:
         json.dump(prefixes, f, indent=4)
 
     await ctx.send(f"Prefix changed to `{new_prefix}`")

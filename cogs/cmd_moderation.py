@@ -95,10 +95,6 @@ class Moderation(commands.Cog):
 
         await self.logs_channel.send(embed=confirmation_embed)
 
-    @commands.command()
-    async def test(self, ctx):
-        await self.logs_channel.send("test")
-
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
