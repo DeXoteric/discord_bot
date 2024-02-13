@@ -57,10 +57,19 @@ async def set_prefix(ctx, new_prefix: str):
     await ctx.send(f"Prefix changed to `{new_prefix}`")
 
 
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sync(ctx):
+    print("sync command")
+    if ctx.author.id == config.MY_USER_ID:
+        await bot.tree.sync()
+        await ctx.send("Command tree synced.")
+    else:
+        await ctx.send("You must be the owner to use this command!")
+
+
 @bot.event
 async def on_ready():
-    sync = await bot.tree.sync()
-    print(f"synced {len(sync)} commands")
     print("Bot connected to Discord")
 
 
