@@ -3,13 +3,9 @@ import math
 import os
 import random
 import sqlite3
-from discord.ext import commands
 from discord import app_commands
-
-STARTING_BALANCE = 1000.0
-FIRST_PRESTIGE_LEVEL_AT = 10000.0
-INVEST_COOLDOWN = 1.0
-PRESTIGE_MULTIPLIER = 1.05
+from discord.ext import commands
+import config
 
 
 class InvestmentGame(commands.Cog):
@@ -48,15 +44,16 @@ class InvestmentGame(commands.Cog):
         cursor = db.cursor()
         try:
             cursor.execute(
-                """INSERT INTO users 
-                (user_id, guild_id, balance, prestige, next_prestige_level, total_earned, bankruptcies, successful_investments, failed_investments) 
+                """INSERT INTO users (user_id, guild_id, balance, prestige,
+                next_prestige_level, total_earned, bankruptcies,
+                successful_investments, failed_investments)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     interaction.user.id,
                     interaction.guild.id,
-                    STARTING_BALANCE,
+                    config.STARTING_BALANCE,
                     0,
-                    FIRST_PRESTIGE_LEVEL_AT,
+                    config.FIRST_PRESTIGE_LEVEL_AT,
                     0,
                     0,
                     0,
@@ -65,7 +62,7 @@ class InvestmentGame(commands.Cog):
             )
             db.commit()
             await interaction.response.send_message(
-                f"You successfully joined the game and received {STARTING_BALANCE} coins!"
+                f"You successfully joined the game and received {config.STARTING_BALANCE} coins!"
             )
         except sqlite3.IntegrityError:
             await interaction.response.send_message(
@@ -85,7 +82,8 @@ class InvestmentGame(commands.Cog):
         db = sqlite3.connect("./sqlite3_files/investment_game.db")
         cursor = db.cursor()
         cursor.execute(
-            """SELECT balance, prestige, next_prestige_level, total_earned, bankruptcies, successful_investments, failed_investments 
+            """SELECT balance, prestige, next_prestige_level, total_earned,
+            bankruptcies, successful_investments, failed_investments
             FROM users WHERE guild_id = ? AND user_id = ?""",
             (
                 interaction.guild.id,
@@ -154,16 +152,18 @@ class InvestmentGame(commands.Cog):
 
     @group.command(
         name="invest",
-        description=f"Invest x amount of coins for a chance to get more coins. Cooldown: {INVEST_COOLDOWN} seconds",
+        description=f"Invest x amount of coins for a chance to get more coins. Cooldown: {config.INVEST_COOLDOWN} seconds",
     )
     @app_commands.checks.cooldown(
-        1, INVEST_COOLDOWN, key=lambda i: (i.guild_id, i.user.id)
+        1, config.INVEST_COOLDOWN, key=lambda i: (i.guild_id, i.user.id)
     )
     async def invest(self, interaction: discord.Interaction, amount: float):
         db = sqlite3.connect("./sqlite3_files/investment_game.db")
         cursor = db.cursor()
         cursor.execute(
-            "SELECT balance, prestige, next_prestige_level, total_earned, bankruptcies, successful_investments, failed_investments FROM users WHERE guild_id = ? AND user_id = ?",
+            """SELECT balance, prestige, next_prestige_level, total_earned,
+            bankruptcies, successful_investments, failed_investments
+            FROM users WHERE guild_id = ? AND user_id = ?""",
             (
                 interaction.guild.id,
                 interaction.user.id,
@@ -185,10 +185,10 @@ class InvestmentGame(commands.Cog):
             )
             return
 
-        user_chance = random.randint(0, 10000) / 100
+        user_chance = random.uniform(0, 100)
         if user_chance > 25:
             user_chance -= 25
-        chance_of_success = random.randint(100, 10000) / 100
+        chance_of_success = random.uniform(0, 100)
         profit_percentage = self.get_profit_percentage()
 
         if user_chance < chance_of_success:
@@ -199,21 +199,21 @@ class InvestmentGame(commands.Cog):
             if balance >= next_prestige_level:
                 bonus_coins = balance - next_prestige_level
                 old_balance = balance
-                balance = STARTING_BALANCE + bonus_coins
+                balance = config.STARTING_BALANCE + bonus_coins
                 prestige += 1
                 next_prestige_level = self.calculate_next_prestige_level(prestige)
 
                 await interaction.response.send_message(
                     f"You successfully invested {amount:,} coins and earned {amount * profit_percentage / 100:,.2f} coins!\n"
-                    f"Your chance of success was {chance_of_success}% and your profit percentage was {profit_percentage}%.\n"
+                    f"Your chance of success was {chance_of_success:.2f}% and your profit percentage was {profit_percentage}%.\n"
                     f"You have reached the next prestige level! Your next prestige level is at {next_prestige_level:,} coins.\n"
                     f"Your balance was {old_balance:,.2f} coins.\n"
-                    f"Your balance was reset to {STARTING_BALANCE:,} coins and you received {bonus_coins:,.2f} coins extra."
+                    f"Your balance was reset to {config.STARTING_BALANCE:,} coins and you received {bonus_coins:,.2f} coins extra."
                 )
             else:
                 await interaction.response.send_message(
                     f"You successfully invested {amount:,} coins and earned {amount * profit_percentage / 100:,.2f} coins!\n"
-                    f"Your chance of success was {chance_of_success}% and your profit percentage was {profit_percentage}%.\n"
+                    f"Your chance of success was {chance_of_success:.2f}% and your profit percentage was {profit_percentage}%.\n"
                     f"Your balance is now {balance:,.2f} coins."
                 )
         else:
@@ -225,23 +225,24 @@ class InvestmentGame(commands.Cog):
                     prestige -= 1
                 bankruptcies += 1
                 next_prestige_level = self.calculate_next_prestige_level(prestige)
-                balance = STARTING_BALANCE
+                balance = config.STARTING_BALANCE
 
                 await interaction.response.send_message(
                     f"Your investment failed. You lost {amount:,} coins.\n"
-                    f"Your chance of success was {chance_of_success}% and your profit percentage was {profit_percentage}%.\n"
-                    f"You have run out of coins! You lost 1 prestige level (if you had any) and your balance was reset to {STARTING_BALANCE:,} coins."
+                    f"Your chance of success was {chance_of_success:.2f}% and your profit percentage was {profit_percentage}%.\n"
+                    f"You have run out of coins! You lost 1 prestige level (if you had any) and your balance was reset to {config.STARTING_BALANCE:,} coins."
                 )
             else:
                 await interaction.response.send_message(
                     f"Your investment failed. You lost {amount:,} coins.\n"
-                    f"Your chance of success was {chance_of_success}% and your profit percentage was {profit_percentage}%.\n"
+                    f"Your chance of success was {chance_of_success:.2f}% and your profit percentage was {profit_percentage}%.\n"
                     f"Your balance is now {balance:,.2f} coins."
                 )
 
         cursor.execute(
-            """UPDATE users 
-            SET balance = ?, prestige = ?, next_prestige_level = ?, total_earned = ?, bankruptcies = ?, successful_investments = ?, failed_investments = ? 
+            """UPDATE users SET balance = ?, prestige = ?,
+            next_prestige_level = ?, total_earned = ?, bankruptcies = ?,
+            successful_investments = ?, failed_investments = ?
             WHERE guild_id = ? AND user_id = ?""",
             (
                 round(balance, 2),
@@ -267,22 +268,24 @@ class InvestmentGame(commands.Cog):
 
     # Helper functions
     def calculate_next_prestige_level(self, prestige):
-        return FIRST_PRESTIGE_LEVEL_AT * math.pow(PRESTIGE_MULTIPLIER, prestige)
+        return config.FIRST_PRESTIGE_LEVEL_AT * math.pow(
+            config.PRESTIGE_MULTIPLIER, prestige
+        )
 
     def get_profit_percentage(self):
-        chance_for_better_profit = random.randint(0, 10000) / 100
-        if chance_for_better_profit >= 99:
-            return random.randint(25000, 50000) / 100
-        elif chance_for_better_profit >= 95:
-            return random.randint(12500, 25000) / 100
-        elif chance_for_better_profit >= 85:
-            return random.randint(10000, 20000) / 100
-        elif chance_for_better_profit >= 60:
-            return random.randint(7500, 15000) / 100
-        elif chance_for_better_profit >= 30:
-            return random.randint(5000, 12500) / 100
-        else:
-            return random.randint(2500, 10000) / 100
+        profit_ranges = {
+            99: (250, 500),
+            95: (125, 250),
+            85: (100, 200),
+            60: (75, 150),
+            30: (50, 125),
+            0: (25, 100),
+        }
+
+        chance_for_better_profit = random.uniform(0, 100)
+        for probability, (lower, upper) in profit_ranges.items():
+            if chance_for_better_profit >= probability:
+                return round(random.uniform(lower, upper), 2)
 
 
 async def setup(bot):
